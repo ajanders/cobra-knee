@@ -16,9 +16,9 @@ the gait cycle. I digitized these plots using a screen shot and a tool from:
     
 https://plotdigitizer.com/app. 
 
-The spacing of these plots are uneven. The functions here load the data,
-interpolate it over an even spacing grid, and store it in a dictionary for
-analysis in a primary script.
+The x-axis spacing of these plots is uneven because I digitized them by hand.
+The functions here load the data, interpolate it over an even spacing grid,
+and store it in a dictionary for analysis in a primary script.
 
 """
 
