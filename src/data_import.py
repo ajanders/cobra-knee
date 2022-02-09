@@ -154,7 +154,7 @@ def import_multiple_participant_data(participants):
     # build list of directories
     directories = []
     for participant in participants:
-        directories.append('..\\data\\raw\\'+participant+'\\')
+        directories.append('..\\data\\'+participant+'\\')
 
     # import trials from each directory
     data = {}
