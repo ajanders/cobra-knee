@@ -10,7 +10,7 @@ import pandas as pd
 
 # %% detect heel strikes
 
-def detect_heel_strike(grf):
+def detect_heel_strike(grf, sampling_frequency=1000):
     """
     Given a filtered vertical ground reaction force, return a boolean array
     where True indicates that a heel strike occured at that instant.
@@ -37,10 +37,15 @@ def detect_heel_strike(grf):
 
     # saturate the grf at 25 Newtons
     grf_saturated = grf*1
-    grf_saturated[grf>25] = 25
+
+    # hacky temporary fix
+    smallest_grf = np.min(grf_saturated)
+    grf_saturated = grf_saturated - smallest_grf
+
+    grf_saturated[grf_saturated>25] = 25
 
     # take derivative
-    dt = 0.001
+    dt = 1/sampling_frequency
     grf_rate = np.gradient(grf_saturated, dt)
 
     # loop and detect heel strike
@@ -63,8 +68,28 @@ def detect_heel_strike(grf):
 # %% get heel strike indices
 
 def get_heel_strike_indices(heel_strikes):
+    """
+    Given a boolean array where heel-strikes are True and everything else is
+    False, return the indices of the heel-strikes.
 
+    Parameters
+    ----------
+    heel_strikes : ndarray
+        Boolean array where heel-strikes are true and everything else is False.
+
+    Returns
+    -------
+    heel_strike_indices : ndarray
+        A short array containing the indices of the heel-strikes.
+
+    """
+
+    # 'where' command returns indices
     heel_strike_indices = np.where(heel_strikes)[0]
+
+    # sometimes due to a weird bug, the program thinks the very last data point
+    # is a heel strike. That is virtually never the case, so we'll check if
+    # the last point is a heel strike and drop it if so.
     if heel_strike_indices[-1] == len(heel_strikes)-1:
         heel_strike_indices = heel_strike_indices[0:-1]
 
@@ -73,6 +98,27 @@ def get_heel_strike_indices(heel_strikes):
 # %% get a list of stride arrays for a single signal
 
 def get_stride_list(signal, heel_strike_indices):
+    """
+    Given a measurement (e.g. ground reaction force) and an array/list of
+    heel-strike indices, chop out the individual strides from the signal and
+    store them as arrays inside of a list.
+
+
+    Parameters
+    ----------
+    signal : ndarray
+        Measurement of interest stored in an array.
+    heel_strike_indices : ndarray
+        List or array containing indices of heel-strikes.
+
+    Returns
+    -------
+    strides_list : list
+        Each element of this list will contain an individal stride from the
+        input signal. I.e., strides_list[0] will return an array for the the
+        first stride.
+
+    """
 
     # create an empty list that will contain arrays of data for individual
     # steps
@@ -91,7 +137,8 @@ def get_stride_list(signal, heel_strike_indices):
         # increment the old index
         old_index = index
 
-    # first step is not valid because the first loop chopped from 0:idx
+    # first step is not valid because the first loop chopped from 0:idx, and
+    # 0 was almost definitely not a heel strike
     strides_list.pop(0)
 
     return strides_list
@@ -99,6 +146,23 @@ def get_stride_list(signal, heel_strike_indices):
 # %% get strides from a trial
 
 def trial_strides(heel_strike_indices, trial):
+    """
+    Given a single trial full of signals/measurements and an array/list of
+    heel-strike indices,
+
+    Parameters
+    ----------
+    heel_strike_indices : TYPE
+        DESCRIPTION.
+    trial : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    strides : TYPE
+        DESCRIPTION.
+
+    """
 
     # get a list of strides for each signal
     strides = {}
@@ -178,16 +242,6 @@ def package_strides(strides_filtered_norm, strides_raw_norm):
         # store in signals_dict
         signals_dict[signal_name] = df
 
-    # step two: get the raw torque error and add it to the dict
-    strides_array = strides_raw_norm['Torque Error (Nm)']
-    signals_dict['Torque Error (Nm)'] = pd.DataFrame(data=strides_array,
-                                                     columns=column_names)
-
-    # get the raw torque setpoint and add it to the dict
-    strides_array = strides_raw_norm['Joint Torque Setpoint (Nm)']
-    signals_dict['Joint Torque Setpoint (Nm)'] = pd.DataFrame(data=strides_array,
-                                                              columns=column_names)
-
     return signals_dict
 
 # %% get strides for a participant
@@ -235,54 +289,5 @@ def strides(data):
 
     for participant in data:
         participant_strides(data[participant])
-
-    return None
-
-# %% cut out bad strides with rules
-
-def remove_bad_strides_with_rules(data):
-
-    for participant in data:
-
-        # extract a stride structure for this participant that contains all
-        # trials
-        strides = data[participant]['strides']
-
-        # iterate over each trial
-        for file in strides:
-
-            # extract the filtered and normalized ground reaction forces for
-            # each stride in this trial
-            all_grfs = strides[file]['GRFz (N)'].values
-
-            # build a list that contains column indices to remove
-            bad_columns = []
-            for column, grf in enumerate(all_grfs.transpose()):
-
-                if (np.max(grf) < 620) or (grf[365] > 230):
-                    bad_columns.append(column)
-
-            # now here i need to remove bad steps using the list i just built
-            all_strides = strides[file]
-
-            # loop through signals and delete columns with bad strides
-            for signal_name in all_strides:
-
-                # extract a numpy array from the dataframe
-                strides_array = all_strides[signal_name].values
-
-                # delete the bad strides, return only the good ones
-                good_strides_array = np.delete(strides_array, bad_columns, axis=1)
-
-                # create a column headers for new dataframe
-                num_strides = good_strides_array.shape[1]
-                column_names = ['Stride '+str(i) for i in range(num_strides)]
-                df = pd.DataFrame(data=good_strides_array,
-                                  columns=column_names)
-
-                # repackage
-                all_strides[signal_name] = df
-
-
 
     return None
