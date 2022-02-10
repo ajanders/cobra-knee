@@ -16,27 +16,49 @@ calling functions, all of the heavy-lifting code is in the src folder.
 
 """
 
-import numpy as np
-import matplotlib.pyplot as plt
+import pickle
 
 from src import data_import as load
 from src import filters
+from src import treadmill
+from src import gait_cycles
+from src import averages
 
 # %% Import all files in the specified directory
 
 # data is stored in 10-second long tdms files in the 'data' folder of the
 # repo. Data is not available online for data-sharing rules at the VA.
 
-participant = ['anthony static']
+participant = ['anthony walking']
 data = load.import_multiple_participant_data(participant)
+
+# %% Account for treadmill drift
+
+treadmill.zero_all_grfs(data)
 
 # %% Filter data
 
 # apply a low-pass butterworth filter to some of the signals within the data.
-# filter cutoff frequencies are in Hz
+# filter cutoff frequencies are in Hz.
 filter_frequencies = {'GRFz (N)': 20,
-                      'Exoskeleton Angle (deg)': 12}
+                      'Exoskeleton Angle (deg)': 12,
+                      'Joint Torque Setpoint (Nm)': 12,
+                      'Joint Torque (Nm)': 12,
+                      'Gait Phase (%)': 499}
 
 filters.filter_signals(data, filter_frequencies)
 
-# %%
+# %% Segment gait cycles
+
+gait_cycles.strides(data)
+
+# %% Construct the average signal for each signal in each trial
+
+averages.average_strides(data)
+
+# %% pickle data and store it
+
+filename = '..//results//intermediate//main_gait_pipeline_pickle_output'
+outfile = open(filename, 'wb')
+pickle.dump(data, outfile)
+outfile.close()
