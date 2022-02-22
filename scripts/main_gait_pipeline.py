@@ -20,21 +20,18 @@ import pickle
 
 from src import data_import as load
 from src import filters
-from src import treadmill
 from src import gait_cycles
 from src import averages
+from src import results
 
 # %% Import all files in the specified directory
 
 # data is stored in 10-second long tdms files in the 'data' folder of the
-# repo. Data is not available online for data-sharing rules at the VA.
+# repo. Data is not available online due to current data-sharing rules at the
+# VA.
 
-participant = ['anthony walking']
+participant = ['BP A 010']
 data = load.import_multiple_participant_data(participant)
-
-# %% Account for treadmill drift
-
-treadmill.zero_all_grfs(data)
 
 # %% Filter data
 
@@ -55,6 +52,11 @@ gait_cycles.strides(data)
 # %% Construct the average signal for each signal in each trial
 
 averages.average_strides(data)
+
+# %% Compute output metrics for paper
+
+# compute peak torque, peak cable force, total range of motion over all trials
+results.compute_outcomes(data)
 
 # %% pickle data and store it
 

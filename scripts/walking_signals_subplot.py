@@ -25,19 +25,23 @@ infile.close()
 # %% Extract data
 
 # extract the filtered signals from the data structure
-filt_data = data['anthony walking']['filtered signals']
+filt_data = data['BP A 010']['filtered signals']
 
 # extract trial that will be plotted
-filename = 'exo_on_20Nm_0'
+filename = 'high_0'
 trial = filt_data[filename]
 
 # extract signals
 time = np.linspace(0, 10, 10000)
 grf = trial['GRFz (N)'].values
-phase = trial['Gait Phase (%)']
+phase = trial['Gait Phase (%)']*100
 angle = trial['Exoskeleton Angle (deg)']
 setpoint = trial['Joint Torque Setpoint (Nm)']
 torque = trial['Joint Torque (Nm)']
+
+# add offset to angle, measured in office after data collection was over
+offset = 73.4
+angle = angle + offset
 
 # %% Create plot
 
@@ -52,12 +56,12 @@ axes[0].plot(time, grf, linewidth=w, color=colors[0])
 axes[0].set_ylabel('GRFz (N)')
 
 axes[1].plot(time, phase, color=colors[1], linewidth=w)
-axes[1].set_ylabel('Phase')
+axes[1].set_ylabel('Phase (%)')
 
 axes[2].plot(time, angle, color=colors[2], linewidth=w)
-axes[2].set_ylabel('Exo Angle (deg)')
+axes[2].set_ylabel('Exoskeleton\nAngle (deg)')
 
 axes[3].plot(time, setpoint, 'k--', linewidth=w)
 axes[3].plot(time, torque, 'r', linewidth=w)
-axes[3].set_ylabel('Exo Torque (Nm)')
+axes[3].set_ylabel('Exoskeleton\nTorque (Nm)')
 axes[3].set_xlabel('Time (s)')
