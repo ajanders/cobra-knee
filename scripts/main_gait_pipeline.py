@@ -26,9 +26,11 @@ from src import results
 
 # %% Import all files in the specified directory
 
-# data is stored in 10-second long tdms files in the 'data' folder of the
-# repo. Data is not available online due to current data-sharing rules at the
-# VA.
+"""
+Data is stored in 10-second long tdms files in the 'data' folder of the
+repository. Data is not available online due to current data-sharing rules at
+the Seattle VA Hospital. Will be uploaded in the future if possible.
+"""
 
 participant = ['BP A 010']
 data = load.import_multiple_participant_data(participant)
@@ -46,18 +48,25 @@ filters.filter_signals(data, filter_frequencies)
 
 # %% Segment gait cycles
 
+# Segment the data in each file into individual strides using heel strikes
+# and normalize in time.
 gait_cycles.segment_strides(data)
 
 # %% Construct the average signal for each signal in each trial
 
+# Compute the mean stride for every file.
 averages.average_strides(data)
 
 # %% Compute output metrics for paper
 
-# compute peak torque, peak cable force, total range of motion over all trials
+# Compute peak torque, peak cable force, average range of motion, and rms
+# tracking error over all trials
 results.compute_outcomes(data)
 
 # %% pickle data and store it
+
+# store the data in an intermediate location that can be accessed by other
+# scripts for plotting and visualization. 
 
 filename = '..//results//intermediate//main_gait_pipeline_pickle_output'
 outfile = open(filename, 'wb')
