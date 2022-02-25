@@ -40,14 +40,13 @@ data = load.import_multiple_participant_data(participant)
 filter_frequencies = {'GRFz (N)': 20,
                       'Exoskeleton Angle (deg)': 12,
                       'Joint Torque Setpoint (Nm)': 12,
-                      'Joint Torque (Nm)': 12,
-                      'Gait Phase (%)': 499}
+                      'Joint Torque (Nm)': 12}
 
 filters.filter_signals(data, filter_frequencies)
 
 # %% Segment gait cycles
 
-gait_cycles.strides(data)
+gait_cycles.segment_strides(data)
 
 # %% Construct the average signal for each signal in each trial
 

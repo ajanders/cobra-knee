@@ -24,24 +24,30 @@ infile.close()
 
 # %% Extract data
 
-# extract the filtered signals from the data structure
-filt_data = data['BP A 010']['filtered signals']
-
-# extract trial that will be plotted
+# define the file that will be plotted
 filename = 'high_0'
-trial = filt_data[filename]
 
-# extract signals
-time = np.linspace(0, 10, 10000)
-grf = trial['GRFz (N)'].values
-phase = trial['Gait Phase (%)']*100
-angle = trial['Exoskeleton Angle (deg)']
-setpoint = trial['Joint Torque Setpoint (Nm)']
-torque = trial['Joint Torque (Nm)']
+# extract the raw signals from the data structure
+trial_raw = data['BP A 010']['raw signals'][filename]
+
+# get the phase signal
+phase = trial_raw['Gait Phase (%)']
+
+# extract the filtered signals from the data structure
+trial_filtered = data['BP A 010']['filtered signals'][filename]
+
+# extract filtered signals for the plot
+grf = trial_filtered['GRFz (N)']
+angle = trial_filtered['Exoskeleton Angle (deg)']
+setpoint = trial_filtered['Joint Torque Setpoint (Nm)']
+torque = trial_filtered['Joint Torque (Nm)']
 
 # add offset to angle, measured in office after data collection was over
 offset = 73.4
 angle = angle + offset
+
+# define time
+time = np.linspace(0, 10, 10000)
 
 # %% Create plot
 
@@ -56,7 +62,7 @@ axes[0].plot(time, grf, linewidth=w, color=colors[0])
 axes[0].set_ylabel('GRFz (N)')
 
 axes[1].plot(time, phase, color=colors[1], linewidth=w)
-axes[1].set_ylabel('Phase (%)')
+axes[1].set_ylabel('Gait\nPhase (%)')
 
 axes[2].plot(time, angle, color=colors[2], linewidth=w)
 axes[2].set_ylabel('Exoskeleton\nAngle (deg)')
