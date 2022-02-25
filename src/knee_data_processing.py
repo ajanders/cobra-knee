@@ -144,10 +144,10 @@ def smooth_moments(control_even, esr_even, biom_even):
     control : array
         Array containing healthy control knee moments without digitization
         error.
-    esr : TYPE
+    esr : array
         Array containing amputee ESR knee moments without digitization
         error.
-    biom : TYPE
+    biom : array
         Array containing amputee Biom knee moments without digitization error.
 
 

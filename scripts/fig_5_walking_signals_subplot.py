@@ -17,6 +17,8 @@ import matplotlib.pyplot as plt
 
 # %% Load data from storage
 
+# This loads the pickle output of the "main_gait_pipeline.py" program.
+
 filename = '..//results//intermediate//main_gait_pipeline_pickle_output'
 infile = open(filename, 'rb')
 data = pickle.load(infile)
@@ -42,12 +44,21 @@ angle = trial_filtered['Exoskeleton Angle (deg)']
 setpoint = trial_filtered['Joint Torque Setpoint (Nm)']
 torque = trial_filtered['Joint Torque (Nm)']
 
-# add offset to angle, measured in office after data collection was over
-offset = 73.4
-angle = angle + offset
-
 # define time
 time = np.linspace(0, 10, 10000)
+
+# %% Add encoder offset
+
+"""
+The knee exoskeleton encoder was not properly zero-ed against the hard stop
+before the beginning of the experiment. The relative angles are all correct,
+they just need to be shifted into a frame where "zero" means the struts are
+at a 180 degree angle (inline). The appropriate offset value was measured in
+the lab a day after the experiment and is implemented here as a static offset.
+"""
+
+offset = 73.4
+angle = angle + offset
 
 # %% Create plot
 

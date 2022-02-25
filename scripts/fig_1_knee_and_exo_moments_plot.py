@@ -19,6 +19,7 @@ from src import knee_data_processing as ferris
 
 # %% Load Ferris data
 
+# digitized knee moments from the literature
 knee_moments = ferris.load_and_process_ferris_moments()
 
 # extract data
@@ -28,6 +29,9 @@ esr = knee_moments['esr']
 biom = knee_moments['biom']
 
 # %% Generate candidate control signals
+
+# create a function that generates example setpoints for the knee exoskeleton
+# torque controller using the equation from a gaussian function
 
 def torque_signal(peak, midpoint, width):
 
