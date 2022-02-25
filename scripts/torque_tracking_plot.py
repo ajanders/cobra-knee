@@ -38,12 +38,6 @@ infile.close()
 # extract average strides
 average_strides = data['BP A 010']['averages']
 
-# extract phase
-phase_trans = (average_strides['transparent_0']['Gait Phase (%)']['Mean'] + average_strides['transparent_0']['Gait Phase (%)']['Mean'])/2
-phase_low = (average_strides['low_0']['Gait Phase (%)']['Mean'] + average_strides['low_1']['Gait Phase (%)']['Mean'])/2
-phase_med = (average_strides['med_0']['Gait Phase (%)']['Mean'] + average_strides['med_1']['Gait Phase (%)']['Mean'])/2
-phase_high = (average_strides['high_0']['Gait Phase (%)']['Mean'] + average_strides['high_1']['Gait Phase (%)']['Mean'])/2
-
 # extract setpoints for different modes
 setpoint_transparent = (average_strides['transparent_0']['Joint Torque Setpoint (Nm)']['Mean'] + average_strides['transparent_0']['Joint Torque Setpoint (Nm)']['Mean'])/2
 setpoint_low = (average_strides['low_0']['Joint Torque Setpoint (Nm)']['Mean'] + average_strides['low_1']['Joint Torque Setpoint (Nm)']['Mean'])/2
