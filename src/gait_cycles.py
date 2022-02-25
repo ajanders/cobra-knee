@@ -8,74 +8,17 @@ Created on Tue Dec 21 13:11:59 2021
 import numpy as np
 import pandas as pd
 
-# %% detect heel strikes
-
-def detect_heel_strike(grf, sampling_frequency=1000):
-    """
-    Given a filtered vertical ground reaction force, return a boolean array
-    where True indicates that a heel strike occured at that instant.
-
-    Heel strikes are detected using the derivative of the ground reaction
-    force with respect to time. To avoid multiple peaks/valleys in the
-    ground reaction force during mid-stance, the grf is 'saturated' at 25 N
-    before the derivative is taken. This results in clean spikes in the rate
-    as the foot contacts the ground.
-
-
-    Parameters
-    ----------
-    grf : ndarray
-        An array of vertical ground reaction forces in Newtons.
-
-    Returns
-    -------
-    heel_strikes : ndarray
-        An array of boolean values that are only True when a heel strike is
-        detected.
-
-    """
-
-    # saturate the grf at 25 Newtons
-    grf_saturated = grf*1
-
-    # hacky temporary fix
-    smallest_grf = np.min(grf_saturated)
-    grf_saturated = grf_saturated - smallest_grf
-
-    grf_saturated[grf_saturated>25] = 25
-
-    # take derivative
-    dt = 1/sampling_frequency
-    grf_rate = np.gradient(grf_saturated, dt)
-
-    # loop and detect heel strike
-    over_thresh = np.zeros(len(grf_rate))
-    heel_strikes = np.full(len(grf_rate), False)
-    thrsh = 500
-    for i in range(len(grf_rate)):
-
-        # is the rate over the threshold?
-        if grf_rate[i] > thrsh:
-            over_thresh[i] = 1
-
-        # is this the first time the signal has crossed the threshold for this
-        # step?
-        if (i>0) & (over_thresh[i]==1) & (over_thresh[i-1]==0):
-            heel_strikes[i] = True
-
-    return heel_strikes
-
 # %% get heel strike indices
 
-def get_heel_strike_indices(heel_strikes):
+def get_heel_strike_indices(phase):
     """
-    Given a boolean array where heel-strikes are True and everything else is
-    False, return the indices of the heel-strikes.
+    Given an of real-time gait phase, return the indices of the heel-strikes.
 
     Parameters
     ----------
-    heel_strikes : ndarray
-        Boolean array where heel-strikes are true and everything else is False.
+    phase : ndarray
+        Array of real-time gait phase. Starts at zero and increases linearly
+        to one. Signal is reset to zero at each heel-strike.
 
     Returns
     -------
@@ -85,12 +28,12 @@ def get_heel_strike_indices(heel_strikes):
     """
 
     # 'where' command returns indices
-    heel_strike_indices = np.where(heel_strikes)[0]
+    heel_strike_indices = np.where(phase==0)[0]
 
     # sometimes due to a weird bug, the program thinks the very last data point
     # is a heel strike. That is virtually never the case, so we'll check if
     # the last point is a heel strike and drop it if so.
-    if heel_strike_indices[-1] == len(heel_strikes)-1:
+    if heel_strike_indices[-1] == len(phase)-1:
         heel_strike_indices = heel_strike_indices[0:-1]
 
     return heel_strike_indices
@@ -241,53 +184,54 @@ def package_strides(strides_filtered_norm, strides_raw_norm):
 
         # store in signals_dict
         signals_dict[signal_name] = df
+        
+    # step two: get the raw gait phase signal and add it to the dict
+    strides_array = strides_raw_norm['Gait Phase (%)']
+    df = pd.DataFrame(data=strides_array, columns=column_names)
+    signals_dict['Gait Phase (%)'] = df
 
     return signals_dict
-
-# %% get strides for a participant
-
-def participant_strides(participant_data):
-
-    file_names = participant_data['file names']
-
-    participant_strides = {}
-    for file in file_names:
-
-        trial_filtered = participant_data['filtered signals'][file]
-        trial_raw = participant_data['raw signals'][file]
-        grf = trial_filtered['GRFz (N)'].values
-
-        # first for this trial, I want to extract heel strikes
-        heel_strikes = detect_heel_strike(grf)
-
-        # then we need to get the indices needed to segment the gait cycle
-        heel_strike_indices = get_heel_strike_indices(heel_strikes)
-
-        # chop each signal from a trial up into strides
-        strides_filtered = trial_strides(heel_strike_indices, trial_filtered)
-        strides_raw = trial_strides(heel_strike_indices, trial_raw)
-
-        # normalize strides to time
-        strides_filtered_norm = normalize_trial_strides(strides_filtered)
-        strides_raw_norm = normalize_trial_strides(strides_raw)
-
-        # package all relevant strides for this file into a dictionary with
-        # signal names as keys and Pandas DataFrames as values
-        signals_dict = package_strides(strides_filtered_norm,
-                                       strides_raw_norm)
-
-        # place into container
-        participant_strides[file] = signals_dict
-
-    participant_data['strides'] = participant_strides
-
-    return None
 
 # %% strides for all participants
 
 def strides(data):
 
+    # loop over each participant
     for participant in data:
-        participant_strides(data[participant])
+        
+        # extract this participant's data and corresponding file names
+        participant_data = data[participant]
+        file_names = participant_data['file names']
+
+        # loop over each file
+        participant_strides = {}
+        for file in file_names:
+
+            # extract filtered signals, raw signals, and gait phase
+            trial_filtered = participant_data['filtered signals'][file]
+            trial_raw = participant_data['raw signals'][file]
+            phase = trial_raw['Gait Phase (%)'].values
+
+            # get the indices needed to segment the gait cycle
+            heel_strike_indices = get_heel_strike_indices(phase)
+
+            # chop each signal from a trial up into strides
+            strides_filtered = trial_strides(heel_strike_indices,
+                                             trial_filtered)
+            strides_raw = trial_strides(heel_strike_indices, trial_raw)
+
+            # normalize strides to time
+            strides_filtered_norm = normalize_trial_strides(strides_filtered)
+            strides_raw_norm = normalize_trial_strides(strides_raw)
+
+            # package all relevant strides for this file into a dictionary with
+            # signal names as keys and Pandas DataFrames as values
+            signals_dict = package_strides(strides_filtered_norm,
+                                           strides_raw_norm)
+
+            # place into container
+            participant_strides[file] = signals_dict
+
+        participant_data['strides'] = participant_strides
 
     return None
