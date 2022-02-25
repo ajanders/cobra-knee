@@ -16,6 +16,23 @@ import pandas as pd
 # %% all participants
 
 def average_strides(data):
+    """
+    Compute the mean signal (and standard deviation) for each stride over each
+    file.
+
+    Parameters
+    ----------
+    data : dictionary
+        This is the primary data structure in the main gait processing
+        pipeline.
+
+    Returns
+    -------
+    None. An 'averages' key is added to the input data structure in place, and
+    maps to further dictionaries/dataframes with mean and sd signals for each
+    trial.
+
+    """
 
     # loop over each participant in the data set
     for participant in data:
