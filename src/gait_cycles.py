@@ -160,7 +160,7 @@ def normalize_trial_strides(strides):
 
     # loop over each signal. preallocate a dictionary to be returned where
     # keys are signal names and values are multi-dimensional data arrays.
-    normalized_strides = {}
+    strides_uniform = {}
     for signal in strides:
         
         # extract the list of variable-length strides for this signal
@@ -195,37 +195,28 @@ def normalize_trial_strides(strides):
         norm_stride = np.array(norm_stride).transpose()
         
         # put in dictionary to be returned                
-        normalized_strides[signal] = norm_stride
+        strides_uniform[signal] = norm_stride
 
-    return normalized_strides
+    return strides_uniform
 
 # %% package_strides
 
-def package_strides(strides_filtered_norm, strides_raw_norm):
+def package_strides(strides_uniform):
     """
-    All filtered signals get normalized, but only one raw signal (phase) gets
-    normalized. This function takes the output of "normalize_trial_strides"
-    for the filtered and raw data and returns a single dictionary where
-    signal names map to Pandas DataFrames where each column is a labeled, 
+    This function takes the output of "normalize_trial_strides", a dictionary
+    that maps signal names to arrays, and returns a dictionary that maps
+    signal names to Pandas DataFrames where each column is a labeled, 
     uniform-length stride.
     
-    This function is necessary because the "normalize_trial_strides" function
-    is called by the primary gait pipeline twice, once for filtered signals and
-    once for unfiltered signals in each trial. Here, we're just combining those
-    results in a nice format.
+    This function is just here to clean/package the data.
 
     Parameters
     ----------
-    strides_filtered_norm : dictionary
+    strides_uniform : dictionary
         Keys are signal names and values are ndarrays where each column is a
         single stride and rows represent increasing gait phase. Rows are
         normalized to a length of 500. This is the ouput of the
-        "normalize_trial_strides" when called on a "filtered" dataframe
-    strides_raw_norm : dictionary
-        Keys are signal names and values are ndarrays where each column is a
-        single stride and rows represent increasing gait phase. Rows are
-        normalized to a length of 500. This is the ouput of the
-        "normalize_trial_strides" when called on a "raw" dataframe
+        "normalize_trial_strides".
 
     Returns
     -------
@@ -236,7 +227,7 @@ def package_strides(strides_filtered_norm, strides_raw_norm):
     """
 
     # first see how many strides are in each signal by looking at GRFz
-    grfz_array = strides_filtered_norm['GRFz (N)']
+    grfz_array = strides_uniform['GRFz (N)']
     num_strides = grfz_array.shape[1]
 
     # create a list of strings for column header names,
@@ -248,37 +239,29 @@ def package_strides(strides_filtered_norm, strides_raw_norm):
     # preallocate output dictionary
     signals_dict = {}
     
-    # step one: convert all signals in 'filtered_norm' to DataFrames. Loop over
-    # each signal in the dictionary
-    for signal_name in strides_filtered_norm:
+    # convert all signals to DataFrames. Loop over each signal in the
+    # dictionary
+    for signal_name in strides_uniform:
 
         # get a 500 row by N column numpy array containing strides for this
         # signal
-        strides_array = strides_filtered_norm[signal_name]
+        strides_array = strides_uniform[signal_name]
 
         # convert to dataframe with column names from above
         df = pd.DataFrame(data=strides_array, columns=column_names)
 
         # store in signals_dict
         signals_dict[signal_name] = df
-        
-    # step two: get the raw gait phase signal and add it to the dict
-    strides_array = strides_raw_norm['Gait Phase (%)']
-    df = pd.DataFrame(data=strides_array, columns=column_names)
-    signals_dict['Gait Phase (%)'] = df
 
     return signals_dict
 
-# %% segment all signals for all trials for all participants into normalized strides
+# %% segment_strides
 
 def segment_strides(data):
     """
     This is the primary pipeline function that uses the other functions in this
     file to chop every signal in every trial in every participant into strides
     with a uniform-vector length.
-    
-    Things are a little messy here and should be refactored in future analyses.
-    Specifically, we want to chop out the 'gait phase' signal and the 
 
     Parameters
     ----------
@@ -303,23 +286,20 @@ def segment_strides(data):
         participant_strides = {}
         for file in file_names:
 
-            # extract filtered signals, raw signals, and gait phase
-            trial_filtered = participant_data['filtered signals'][file]
+            # extract filtered signals and gait phase
+            trial = participant_data['filtered signals'][file]
             trial_raw = participant_data['raw signals'][file]
             phase = trial_raw['Gait Phase (%)'].values
 
             # chop each signal from the trial up into strides
-            strides_filtered = trial_strides(phase, trial_filtered)
-            strides_raw = trial_strides(phase, trial_raw)
+            strides_variable_length = trial_strides(phase, trial)
 
             # create uniform-length stride vectors to normalize strides in time 
-            strides_filtered_norm = normalize_trial_strides(strides_filtered)
-            strides_raw_norm = normalize_trial_strides(strides_raw)
+            strides_uniform = normalize_trial_strides(strides_variable_length)
 
             # package all relevant strides for this file into a dictionary with
             # signal names as keys and Pandas DataFrames as values
-            signals_dict = package_strides(strides_filtered_norm,
-                                           strides_raw_norm)
+            signals_dict = package_strides(strides_uniform)
 
             # place into container
             participant_strides[file] = signals_dict
