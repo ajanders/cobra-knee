@@ -2,7 +2,12 @@
 """
 Created on Wed Dec 29 10:28:23 2021
 
-@author: Anthony
+@author: Anthony Anderson
+
+This is a single function that computes the mean stride for each signal in each
+file. This should probably be broken down into at least two functions at some
+point in the future to improve readability.
+
 """
 
 import numpy as np

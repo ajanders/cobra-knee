@@ -46,7 +46,7 @@ filters.filter_signals(data, filter_frequencies)
 
 # %% Segment gait cycles
 
-gait_cycles.strides(data)
+gait_cycles.segment_strides(data)
 
 # %% Construct the average signal for each signal in each trial
 
