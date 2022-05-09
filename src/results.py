@@ -15,6 +15,54 @@ text and tables of the paper. These outcomes are:
 
 import numpy as np
 
+# %% compute peak torque across conditions
+
+def compute_peak_torque_across_conditions(data):
+    
+    signals_conditions = data['BP A 010']['averages']['conditions']
+    
+    trans = signals_conditions['transparent']
+    low = signals_conditions['low']
+    med = signals_conditions['medium']
+    high = signals_conditions['high']
+    
+    percent_gait = np.linspace(0, 100, len(trans['GRFz (N)']['Mean']))
+    
+    trans_mean = trans['Joint Torque (Nm)']['Mean']
+    trans_sd = trans['Joint Torque (Nm)']['SD']
+    trans_mean = trans_mean[percent_gait<70]
+    trans_sd = trans_sd[percent_gait<70]
+    peak_trans_mean = np.max(trans_mean)
+    peak_trans_sd = trans_sd[np.where(trans_mean==peak_trans_mean)[0][0]]
+    
+    low_mean = low['Joint Torque (Nm)']['Mean']
+    low_sd = low['Joint Torque (Nm)']['SD']
+    low_mean = low_mean[percent_gait<70]
+    trans_sd = low_sd[percent_gait<70]
+    peak_low_mean = np.max(low_mean)
+    peak_low_sd = low_sd[np.where(low_mean==peak_low_mean)[0][0]]
+    
+    med_mean = med['Joint Torque (Nm)']['Mean']
+    med_sd = med['Joint Torque (Nm)']['SD']
+    med_mean = med_mean[percent_gait<70]
+    med_sd = med_sd[percent_gait<70]
+    peak_med_mean = np.max(med_mean)
+    peak_med_sd = med_sd[np.where(med_mean==peak_med_mean)[0][0]]
+    
+    high_mean = high['Joint Torque (Nm)']['Mean']
+    high_sd = high['Joint Torque (Nm)']['SD']
+    high_mean = high_mean[percent_gait<70]
+    high_sd = high_sd[percent_gait<70]
+    peak_high_mean = np.max(high_mean)
+    peak_high_sd = high_sd[np.where(high_mean==peak_high_mean)[0][0]]
+    
+    peak_torques = {'transparent': (peak_trans_mean, peak_trans_sd),
+                    'low': (peak_low_mean, peak_low_sd),
+                    'med': (peak_med_mean, peak_med_sd),
+                    'high': (peak_high_mean, peak_high_sd)}
+    
+    return peak_torques
+
 # %% compute_maximum_torque_all_trials
 
 def compute_maximum_torque_all_trials(data):
@@ -183,6 +231,10 @@ def compute_outcomes(data):
     accessed with 'outcomes' key.
 
     """
+    
+    # get the peak +/- sd stance phase torque for each condition
+    peak_torques = compute_peak_torque_across_conditions(data)
+    
     # get the peak torques and cable forces, each returned as scalars
     max_torque = compute_maximum_torque_all_trials(data)
     max_force = max_torque/0.055
@@ -195,8 +247,9 @@ def compute_outcomes(data):
     tracking_errors = compute_tracking_error(data)
     
     # package everything in a dictionary
-    outcomes = {'peak torque': max_torque,
-                'peak force': max_force,
+    outcomes = {'peak torques': peak_torques,
+                'max torque': max_torque,
+                'max force': max_force,
                 'average range of motion': mean_rom,
                 'sd range of motion': sd_rom,
                 'tracking errors': tracking_errors}
