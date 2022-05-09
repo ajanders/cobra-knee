@@ -54,8 +54,11 @@ gait_cycles.segment_strides(data)
 
 # %% Construct the average signal for each signal in each trial
 
-# Compute the mean stride for every file.
+# Compute the mean stride for every signal in every file.
 averages.average_strides(data)
+
+# Compute the mean stride for every signal in every condition.
+averages.condition_averages(data)
 
 # %% Compute output metrics for paper
 

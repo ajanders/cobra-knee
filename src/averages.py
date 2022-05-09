@@ -13,6 +13,37 @@ point in the future to improve readability.
 import numpy as np
 import pandas as pd
 
+# %% compute average strides for a single file/trial
+
+def trial_average_strides(trial):
+    
+    # create new data structure to hold average signals
+    trial_averages = {}
+
+    # we'll store average data in a pandas DataFrame with these
+    # columns:
+    column_headers = ['Mean', 'SD']
+
+    # now loop through signals
+    for signal_name in trial:
+
+        # extract all strides as an array where each column is a stride
+        strides_array = trial[signal_name].values
+
+        # compute averages and standard deviations over the columns
+        average_stride = np.mean(strides_array, axis=1)
+        sd_stride = np.std(strides_array, axis=1)
+
+        # add mean and sd arrays to a single array and put in DataFrame
+        average_array = np.column_stack((average_stride, sd_stride))
+        df = pd.DataFrame(data=average_array, columns=column_headers)
+
+        # put the DataFrame in a dictionary where the file name is the
+        # key
+        trial_averages[signal_name] = df
+    
+    return trial_averages
+
 # %% all participants
 
 def average_strides(data):
@@ -40,8 +71,8 @@ def average_strides(data):
         # extract data structure for this participant
         participant_data = data[participant]
         
-        # extract the 'strides' data structure from the participant data
-        # structure
+        # extract the normalized 'strides' data structure from the participant
+        # data structure
         stride_data = participant_data['strides']
 
         # create a dictionary container for average strides for all files
@@ -50,41 +81,66 @@ def average_strides(data):
         # loop through each signal within each file and compute means and sd's
         for file_name in stride_data:
 
-            # extract the time normalized strides for one file/trial
-            trial = stride_data[file_name]
-
-            # create a new data structure to hold average signals for this
-            # trial
-            file_averages = {}
-
-            # we'll store average data in a pandas DataFrame with these
-            # columns:
-            column_headers = ['Mean', 'SD']
-
-            # now loop through signals
-            for signal_name in trial:
-
-                # extract all strides as an array where each column is a stride
-                strides_array = trial[signal_name].values
-
-                # compute averages and standard deviations over the columns
-                average_stride = np.mean(strides_array, axis=1)
-                sd_stride = np.std(strides_array, axis=1)
-
-                # add mean and sd arrays to a single array and put in DataFrame
-                average_array = np.column_stack((average_stride, sd_stride))
-                df = pd.DataFrame(data=average_array, columns=column_headers)
-
-                # put the DataFrame in a dictionary where the file name is the
-                # key
-                file_averages[signal_name] = df
+            # compute mean and sd for all signals in this trial
+            trial_averages = trial_average_strides(stride_data[file_name])
 
             # once all signals have been iterated over, put the averages for
             # all signals in a dictionary where the file name is the key
-            averages[file_name] = file_averages
+            averages[file_name] = trial_averages
 
         # after all files have been iterated over, store the complete output
         # under the key 'averages
         participant_data['averages'] = averages
 
     return None
+
+# %% function to compute average two signals
+
+def mean_signal(signal_0, signal_1):
+    return (signal_0+signal_1)/2
+
+# %% 
+
+def merge_trials(averages, file_name_0, file_name_1):
+    
+    trial_0 = averages[file_name_0]
+    trial_1 = averages[file_name_1]
+    
+    merged_dict = {}
+    
+    for signal_name in trial_0:
+        
+        signal_0_mean = trial_0[signal_name]['Mean']
+        signal_1_mean = trial_1[signal_name]['Mean']
+        
+        signal_0_sd = trial_0[signal_name]['SD']
+        signal_1_sd = trial_1[signal_name]['SD']
+        
+        mean = mean_signal(signal_0_mean, signal_1_mean)
+        sd = mean_signal(signal_0_sd, signal_1_sd)
+        
+        merged_dict[signal_name] = {'Mean': mean, 'SD': sd}
+    
+    return merged_dict
+
+# %% compute means and sd's across conditions
+
+def condition_averages(data):
+    
+    # extract average strides
+    averages = data['BP A 010']['averages']
+
+    # compute mean and SD for each signal across strides
+    transparent = merge_trials(averages, 'transparent_0', 'transparent_1')
+    low = merge_trials(averages, 'low_0', 'low_1')
+    med = merge_trials(averages, 'med_0', 'med_1')
+    high = merge_trials(averages, 'high_0', 'high_1')
+    
+    data['BP A 010']['averages']['conditions'] = {'transparent': transparent,
+                                                  'low': low,
+                                                  'medium': med,
+                                                  'high': high}
+    
+    return None
+    
+    

@@ -15,9 +15,9 @@ text and tables of the paper. These outcomes are:
 
 import numpy as np
 
-# %% compute_peak_torque_all_trials
+# %% compute_maximum_torque_all_trials
 
-def compute_peak_torque_all_trials(data):
+def compute_maximum_torque_all_trials(data):
     """
     Find the highest torque provided by the exoskeleton during the experiment.
 
@@ -184,8 +184,8 @@ def compute_outcomes(data):
 
     """
     # get the peak torques and cable forces, each returned as scalars
-    peak_torque = compute_peak_torque_all_trials(data)
-    peak_force = peak_torque/0.055
+    max_torque = compute_maximum_torque_all_trials(data)
+    max_force = max_torque/0.055
     
     # get the mean and standard deviation range of motion of the exoskeleton
     # as floats
@@ -195,8 +195,8 @@ def compute_outcomes(data):
     tracking_errors = compute_tracking_error(data)
     
     # package everything in a dictionary
-    outcomes = {'peak torque': peak_torque,
-                'peak force': peak_force,
+    outcomes = {'peak torque': max_torque,
+                'peak force': max_force,
                 'average range of motion': mean_rom,
                 'sd range of motion': sd_rom,
                 'tracking errors': tracking_errors}
