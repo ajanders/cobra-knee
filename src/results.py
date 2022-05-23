@@ -102,63 +102,101 @@ def compute_maximum_torque_all_trials(data):
         
     return peak_torque
 
-# %% compute_RoM_all_trials
+# %% compute mean and sd range of motion for a set of strides
 
-def compute_RoM_all_trials(data):
-    """
-    Compute the average range of motion of the exoskeleton over all trials.
-    Exclude trials where the exoskeleton was not worn.
+def compute_trial_rom(strides):
+    
+    strides_angles = strides['Exoskeleton Angle (deg)']
+    
+    rom_list = []
+    for stride_number in strides_angles:
+        stride = strides_angles[stride_number]
+        
+        max_angle = np.max(stride)
+        min_angle = np.min(stride)
+        rom = max_angle - min_angle
+        rom_list.append(rom)
+        
+    # convert rom list to array
+    rom_array = np.array(rom_list)
+    mean_rom = np.mean(rom_array)
+    sd_rom = np.std(rom_array)
+    
+    return mean_rom, sd_rom
 
-    Parameters
-    ----------
-    data : dictionary
-        This is the primary data structure in the main gait processing
-        pipeline, and contains all raw data, filtered data, segmented gait
-        cycles, etc.
+# %% compute RoM across conditions
 
-    Returns
-    -------
-    range_of_motion : float
-        The average encoder range of motion over all trials
+def compute_RoM_across_conditions(data):
+    
+    # compute rom for transparent mode
+    strides_0 = data['BP A 010']['strides']['transparent_0']
+    strides_1 = data['BP A 010']['strides']['transparent_1']
+    
+    mean_rom_0, sd_rom_0 = compute_trial_rom(strides_0)
+    mean_rom_1, sd_rom_1 = compute_trial_rom(strides_1)
+    mean_rom_trans = (mean_rom_0 + mean_rom_1)/2
+    sd_rom_trans = (sd_rom_0 + sd_rom_1)
+    
+    # compute rom for low mode
+    strides_0 = data['BP A 010']['strides']['low_0']
+    strides_1 = data['BP A 010']['strides']['low_1']
+    
+    mean_rom_0, sd_rom_0 = compute_trial_rom(strides_0)
+    mean_rom_1, sd_rom_1 = compute_trial_rom(strides_1)
+    mean_rom_low = (mean_rom_0 + mean_rom_1)/2
+    sd_rom_low = (sd_rom_0 + sd_rom_1)/2
+    
+    # compute rom for medium mode
+    strides_0 = data['BP A 010']['strides']['med_0']
+    strides_1 = data['BP A 010']['strides']['med_1']
+    
+    mean_rom_0, sd_rom_0 = compute_trial_rom(strides_0)
+    mean_rom_1, sd_rom_1 = compute_trial_rom(strides_1)
+    mean_rom_med = (mean_rom_0 + mean_rom_1)/2
+    sd_rom_med = (sd_rom_0 + sd_rom_1)/2
+        
+    # compute rom for high mode
+    strides_0 = data['BP A 010']['strides']['high_0']
+    strides_1 = data['BP A 010']['strides']['high_1']
+    
+    mean_rom_0, sd_rom_0 = compute_trial_rom(strides_0)
+    mean_rom_1, sd_rom_1 = compute_trial_rom(strides_1)
+    mean_rom_high = (mean_rom_0 + mean_rom_1)/2
+    sd_rom_high = (sd_rom_0 + sd_rom_1)/2
+    
+    rom_conditions = {'transparent': (mean_rom_trans, sd_rom_trans),
+                      'low': (mean_rom_low, sd_rom_low),
+                      'medium': (mean_rom_med, sd_rom_med),
+                      'high': (mean_rom_high, sd_rom_high)}
+    
+    return rom_conditions
 
-    """
+# %%
+
+def compute_tracking_error_two_files(data, file_0, file_1):
     
     # extract filtered signals
-    signals = data['BP A 010']['filtered signals']
+    filtered_signals = data['BP A 010']['filtered signals']
     
-    # list of files to ignore because exo was not on the person
-    excluded_files = ['no_exo_0', 'no_exo_1', 'no_exo_2']
+    signal = 'Joint Torque Setpoint (Nm)'
+    setpoint_0 = filtered_signals[file_0][signal].values
+    setpoint_1 = filtered_signals[file_1][signal].values
+    setpoint = np.concatenate((setpoint_0, setpoint_1))
     
-    # range of motion list
-    rom_list = []
+    signal = 'Joint Torque (Nm)'
+    torque_0 = filtered_signals[file_0][signal].values
+    torque_1 = filtered_signals[file_1][signal].values
+    torque = np.concatenate((torque_0, torque_1))
     
-    # loop through files and compute range of motion for each
-    for file_name in signals:
-        
-        if file_name not in excluded_files:
-        
-            # extract encoder signal
-            angle = signals[file_name]['Exoskeleton Angle (deg)'].values
-                      
-            # compute max and min
-            trial_max_angle = np.max(angle)
-            trial_min_angle = np.min(angle)
-            
-            # compute range of motion
-            rom = trial_max_angle - trial_min_angle
-            
-            # append rom for this trial to the list
-            rom_list.append(rom)
-            
-    # compute mean and standard deviations
-    mean_rom = np.mean(np.array(rom_list))
-    sd_rom = np.std(np.array(rom_list))
-        
-    return mean_rom, sd_rom
+    
+    error = setpoint-torque
+    rmse = np.sqrt(np.mean(error**2))
+    
+    return rmse
 
 # %% compute_tracking_error
 
-def compute_tracking_error(data):
+def compute_tracking_error_across_conditions(data):
     """
     This function computes the root mean squared (RMS) torque tracking error
     across all trials and then merges trials to compute errors across
@@ -177,36 +215,32 @@ def compute_tracking_error(data):
         Keys are conditions (transparent, low, medium, high), keys are rms
         tracking error values.
 
-    """
+    """    
     
-    # extract filtered signals
-    filtered_signals = data['BP A 010']['filtered signals']
     
-    # loop over each file and compute error
-    errors = {}
-    for file in filtered_signals:
-        
-        setpoint = filtered_signals[file]['Joint Torque Setpoint (Nm)']
-        torque = filtered_signals[file]['Joint Torque (Nm)']
-        error = setpoint-torque
-        
-        rmse = np.sqrt(np.mean(error**2))
-        
-        errors[file] = rmse
-        
-    # uses individual files to compute errors accross conditions
-    transparent_rms = (errors['transparent_0'] + errors['transparent_1'])/2
-    low_rms = (errors['low_0'] + errors['low_1'])/2
-    med_rms = (errors['med_0'] + errors['med_1'])/2
-    high_rms = (errors['high_0'] + errors['high_1'])/2
-    total_rms = (transparent_rms + low_rms + med_rms + high_rms)/4
-        
+    file_0 = 'transparent_0'
+    file_1 = 'transparent_1'
+    trans_rmse = compute_tracking_error_two_files(data, file_0, file_1)
+    
+    file_0 = 'low_0'
+    file_1 = 'low_1'
+    low_rmse = compute_tracking_error_two_files(data, file_0, file_1)
+    
+    file_0 = 'med_0'
+    file_1 = 'med_1'
+    med_rmse = compute_tracking_error_two_files(data, file_0, file_1)
+    
+    file_0 = 'high_0'
+    file_1 = 'high_1'
+    high_rmse = compute_tracking_error_two_files(data, file_0, file_1)
+    
+    
     # add to dictionary for storage
-    tracking_errors = {'transparent': transparent_rms,
-                       'low': low_rms,
-                       'med': med_rms,
-                       'high': high_rms,
-                       'total': total_rms}
+    tracking_errors = {'transparent': trans_rmse,
+                       'low': low_rmse,
+                       'med': med_rmse,
+                       'high': high_rmse}
+    
     
     return tracking_errors
 
@@ -241,17 +275,16 @@ def compute_outcomes(data):
     
     # get the mean and standard deviation range of motion of the exoskeleton
     # as floats
-    mean_rom, sd_rom = compute_RoM_all_trials(data)
+    rom_outcomes = compute_RoM_across_conditions(data)
     
     # get the RMS tracking errors for all trials as a dictionary
-    tracking_errors = compute_tracking_error(data)
+    tracking_errors = compute_tracking_error_across_conditions(data)
     
     # package everything in a dictionary
     outcomes = {'peak torques': peak_torques,
                 'max torque': max_torque,
                 'max force': max_force,
-                'average range of motion': mean_rom,
-                'sd range of motion': sd_rom,
+                'rom across conditions': rom_outcomes,
                 'tracking errors': tracking_errors}
     
     data['BP A 010']['outcomes'] = outcomes
