@@ -4,9 +4,19 @@ Created on Wed Dec 29 10:28:23 2021
 
 @author: Anthony Anderson
 
-This is a single function that computes the mean stride for each signal in each
-file. This should probably be broken down into at least two functions at some
-point in the future to improve readability.
+This set of functions is used merge and combine data when taking averages
+1) across strides within a single trial and 2) over signals across conditions.
+
+The main_gait_pipeline.py script calls the "average_strides" function and the
+"condition_averages" function.
+
+The average_strides function compute the mean signal (and standard deviation)
+for each stride over each file. For example, given a file with 10 strides and
+four measurements, the function condenses the 10 strides down to a single
+average for each of the four measurements. 
+
+The condition_averages goes one step further, and merges specific files
+together that represent the same experimental condition.
 
 """
 
@@ -16,6 +26,26 @@ import pandas as pd
 # %% compute average strides for a single file/trial
 
 def trial_average_strides(trial):
+    """
+    For a single trial, compute the mean and standard deviation trajectories
+    for each signal of interest. 
+
+    Parameters
+    ----------
+    trial : dictionary
+        This dictionary contains Pandas DataFrames that hold segmented, time
+        normalized strides for four signals of interest. On average, each
+        trial contains 9-10 strides. Signals are exoskeleton angle, ground
+        reaction force, joint torque, and joint torque setpoint.
+
+    Returns
+    -------
+    trial_averages : dictionary
+        Dictionary where signal names are keys, and values are Pandas
+        DataFrames with two columns. First column is 'Mean' and second column
+        is 'SD'.
+
+    """
     
     # create new data structure to hold average signals
     trial_averages = {}
@@ -102,6 +132,28 @@ def mean_signal(signal_0, signal_1):
 # %% 
 
 def merge_trials(averages, file_name_0, file_name_1):
+    """
+    Given average trajectories and two file names that refer to files with
+    the same experimental condition, return the overall average signals for
+    that condition.
+
+    Parameters
+    ----------
+    averages : dictionary
+        Dictionary where file names are keys, and values are sub-dictionaries
+        containing signal names and means and sds.
+    file_name_0 : string
+        first file to combine.
+    file_name_1 : string
+        second file to combine.
+
+    Returns
+    -------
+    merged_dict : dictionary
+        Signal names map to sub-dictionaries with keys 'mean' and 'sd'
+        trajectories.
+
+    """
     
     trial_0 = averages[file_name_0]
     trial_1 = averages[file_name_1]
@@ -126,6 +178,22 @@ def merge_trials(averages, file_name_0, file_name_1):
 # %% compute means and sd's across conditions
 
 def condition_averages(data):
+    """
+    After the mean and standard deviation trajectories have been computed for
+    every trial/file, we need to further average across files that correspond
+    to the same experimental condition.
+
+    Parameters
+    ----------
+    data : dict
+        This is the primary data dictionary that is operated on by all other
+        functions in this pipeline.
+
+    Returns
+    -------
+    None. data is modified in place with a key for 'conditions'.
+
+    """
     
     # extract average strides
     averages = data['BP A 010']['averages']
