@@ -19,7 +19,12 @@ from src import knee_data_processing as ferris
 
 # %% Load Ferris data
 
-# digitized knee moments from the literature
+"""
+Load digitized knee moments from the "Evaluation of a Powered Ankle-Foot
+Prosthetic System During Walking" by Ferris et al. in Archives of Physical 
+Medicine and Rehabilitation, 2012. I digitized these knee moments from the
+pdf file using an online web tool.
+"""
 knee_moments = ferris.load_and_process_ferris_moments()
 
 # extract data
